@@ -1,17 +1,20 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useState } from "react";
 import {
-  StyleSheet,
-  View,
-  TextInput,
-  Pressable,
-  Text,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-import { useState } from "react";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [visibility, setVisibility] = useState<boolean>(true);
 
   const changeVisibility = () => {
@@ -89,7 +92,12 @@ export default function LoginScreen() {
               <View style={styles.footerContainer}>
                 <Text style={styles.footerText}>Don't have an account? </Text>
                 <Pressable>
-                  <Text style={styles.signupText}>Register</Text>
+                  <Text
+                    style={styles.signupText}
+                    onPress={() => router.push("/register")}
+                  >
+                    Register
+                  </Text>
                 </Pressable>
               </View>
             </View>
