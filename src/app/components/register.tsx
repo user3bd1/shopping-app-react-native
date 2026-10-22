@@ -12,12 +12,123 @@ import {
   View,
 } from "react-native";
 
+import {
+  Dimension,
+  LoginCredentials,
+  ProductItem,
+  UserAccount,
+} from "@/types/types";
+
 export default function RegisterScreen() {
   const [visibility, setVisibility] = useState<boolean>(true);
+  const [lastName, setLastName] = useState<string>("");
   const [firstName, setFirstName] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
 
-  const senddata = () => {
-    Alert.alert(`firstName is ${firstName}`);
+  const [isFilledlastName, setisFilledLastName] = useState<boolean>(true);
+  const [isFilledfirstName, setisFilledFirstName] = useState<boolean>(true);
+  const [isFilledphone, setisFilledPhone] = useState<boolean>(true);
+  const [isFilledemail, setisFilledEmail] = useState<boolean>(true);
+  const [isFilledaddress, setisFilledAddress] = useState<boolean>(true);
+  const [isFilledpassword, setisFilledPassword] = useState<boolean>(true);
+
+  const senddata = async () => {
+    const dimension: Dimension = {
+      width: 0,
+      height: 0,
+      depth: 0,
+    };
+
+    const productItem: ProductItem = {
+      brand: "",
+      category: "",
+      description: "",
+      title: "",
+      dimensions: dimension,
+      price: 0,
+      weight: 0,
+      images: [],
+    };
+
+    const newUser: UserAccount = {
+      address: address,
+      cardExpiryMonth: "",
+      cardExpiryYear: "",
+      cardNum: "",
+      cvv: "",
+      email: email,
+      firstName: firstName,
+      lastName: lastName,
+      phone: phone,
+      orders: [productItem],
+      wishList: [productItem],
+    };
+
+    const newLoginCredentials: LoginCredentials = {
+      email: email,
+      password: password,
+    };
+
+    const isFirstEmpty = firstName.trim() === "";
+    const isLastEmpty = lastName.trim() === "";
+    const isAddressEmpty = address.trim() === "";
+    const isPhoneEmpty = phone.trim() === "";
+    const isEmailEmpty = email.trim() === "" || !email.includes("@");
+    const isPasswordEmpty = password.trim() === "";
+
+    setisFilledFirstName(!isFirstEmpty);
+    setisFilledLastName(!isLastEmpty);
+    setisFilledAddress(!isAddressEmpty);
+    setisFilledPhone(!isPhoneEmpty);
+    setisFilledEmail(!isEmailEmpty);
+    setisFilledPassword(!isPasswordEmpty);
+
+    if (
+      isFirstEmpty ||
+      isLastEmpty ||
+      isAddressEmpty ||
+      isPhoneEmpty ||
+      isEmailEmpty ||
+      isPasswordEmpty
+    ) {
+      Alert.alert("You must fill the reqiured fields");
+    } else {
+      const usersApi = process.env.EXPO_PUBLIC_USERS;
+      if (!usersApi) return undefined;
+
+      const userCredentials = process.env.EXPO_PUBLIC_LOGININFO;
+      if (!userCredentials) throw new Error("EXPO_PUBLIC_LOGININFO is not set");
+      const res = await fetch(usersApi, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newUser),
+      });
+
+      const res1 = await fetch(userCredentials, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newLoginCredentials),
+      });
+
+      if (!res.ok && !res1.ok)
+        throw new Error("couldn't register your account");
+
+      setFirstName("");
+      setLastName("");
+      setAddress("");
+      setEmail("");
+      setPassword("");
+      setPhone("");
+
+      Alert.alert("you have successfully registerd your account");
+    }
   };
 
   const changeVisibility = () => {
@@ -52,7 +163,12 @@ export default function RegisterScreen() {
                 <View style={[styles.inputGroup, styles.halfInput]}>
                   <Text style={styles.inputLabel}>First Name</Text>
                   <TextInput
-                    style={styles.textInput}
+                    style={[
+                      styles.textInput,
+                      {
+                        borderColor: isFilledfirstName ? "#E5E5E5" : "red",
+                      },
+                    ]}
                     secureTextEntry={false}
                     keyboardType="default"
                     autoCapitalize="words"
@@ -66,12 +182,17 @@ export default function RegisterScreen() {
                 <View style={[styles.inputGroup, styles.halfInput]}>
                   <Text style={styles.inputLabel}>Last Name</Text>
                   <TextInput
-                    style={styles.textInput}
+                    style={[
+                      styles.textInput,
+                      { borderColor: isFilledlastName ? "#E5E5E5" : "red" },
+                    ]}
                     secureTextEntry={false}
                     keyboardType="default"
                     autoCapitalize="words"
                     placeholder="Doe"
                     placeholderTextColor="#A0A0A0"
+                    value={lastName}
+                    onChangeText={setLastName}
                   />
                 </View>
               </View>
@@ -79,43 +200,77 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Address</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    { borderColor: isFilledaddress ? "#E5E5E5" : "red" },
+                  ]}
                   secureTextEntry={false}
                   keyboardType="default"
                   autoCapitalize="none"
                   placeholder="I don't know 123"
                   placeholderTextColor="#A0A0A0"
+                  value={address}
+                  onChangeText={setAddress}
                 />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Phone</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[
+                    styles.textInput,
+                    { borderColor: isFilledphone ? "#E5E5E5" : "red" },
+                  ]}
                   secureTextEntry={false}
                   keyboardType="phone-pad"
                   autoCapitalize="none"
                   placeholder="04xxxxxxx"
                   placeholderTextColor="#A0A0A0"
+                  value={phone}
+                  onChangeText={setPhone}
                 />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Email address</Text>
-                <View style={styles.emailContainer}>
+                <View
+                  style={[
+                    styles.emailContainer,
+                    { borderColor: isFilledemail ? "#E5E5E5" : "red" },
+                  ]}
+                >
                   <TextInput
+                    style={styles.emailInput}
                     secureTextEntry={false}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     placeholder="you@example.com"
                     placeholderTextColor="#A0A0A0"
+                    value={email}
+                    onChangeText={setEmail}
                   />
                 </View>
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Password</Text>
-                <View style={styles.passwordContainer}>
+
+                <View
+                  style={[
+                    styles.passwordContainer,
+                    {
+                      borderColor:
+                        password.length > 0 &&
+                        (password.length < 12 ||
+                          !/[a-z]/.test(password) ||
+                          !/[A-Z]/.test(password) ||
+                          !/\d/.test(password) ||
+                          isFilledpassword)
+                          ? "red"
+                          : "#E5E5E5",
+                    },
+                  ]}
+                >
                   <TextInput
                     style={styles.passwordInput}
                     secureTextEntry={visibility ?? false}
@@ -123,6 +278,8 @@ export default function RegisterScreen() {
                     autoCapitalize="none"
                     placeholder="••••••••"
                     placeholderTextColor="#A0A0A0"
+                    value={password}
+                    onChangeText={setPassword}
                   />
                   <Pressable>
                     <MaterialCommunityIcons
@@ -212,7 +369,6 @@ const styles = StyleSheet.create({
   textInput: {
     backgroundColor: "#FAFAFA",
     borderWidth: 1,
-    borderColor: "#E5E5E5",
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -224,7 +380,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FAFAFA",
     borderWidth: 1,
-    borderColor: "#E5E5E5",
     borderRadius: 10,
     paddingHorizontal: 16,
   },
@@ -233,11 +388,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FAFAFA",
     borderWidth: 1,
-    borderColor: "#E5E5E5",
     borderRadius: 10,
     paddingHorizontal: 16,
   },
   passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 14,
+    color: "#1A1A1A",
+  },
+  emailInput: {
     flex: 1,
     paddingVertical: 14,
     fontSize: 14,

@@ -1,6 +1,8 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,14 +13,48 @@ import {
   View,
 } from "react-native";
 
+import { LoginCredentials } from "@/types/types";
 import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
+  const [password, setPassword] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+
   const router = useRouter();
   const [visibility, setVisibility] = useState<boolean>(true);
 
   const changeVisibility = () => {
     visibility ? setVisibility(false) : setVisibility(true);
+  };
+
+  const logIn = async () => {
+    const loginApiLink = process.env.EXPO_PUBLIC_LOGININFO;
+    if (!loginApiLink) return undefined;
+
+    const res = await fetch(loginApiLink);
+    const data = await res.json();
+
+    const loginCredentials: LoginCredentials[] = data;
+
+    const loggedIn: LoginCredentials[] = loginCredentials;
+    const userLoginCredentials: LoginCredentials[] = loggedIn.filter(
+      (p) => p.email === email,
+    );
+
+    if (userLoginCredentials.length == 0)
+      Alert.alert(`user with this email doesnt exist`);
+    else {
+      if (
+        userLoginCredentials[0].password !== password ||
+        userLoginCredentials[0].email !== email
+      )
+        Alert.alert(`Wrong email or password`);
+      else {
+        if (userLoginCredentials[0].id == 0) return;
+        await AsyncStorage.setItem("userId", `${userLoginCredentials[0].id}`);
+        router.push("/components/home");
+      }
+    }
   };
   return (
     <View style={styles.container}>
@@ -50,11 +86,14 @@ export default function LoginScreen() {
                 <Text style={styles.inputLabel}>Email address</Text>
                 <View style={styles.emailContainer}>
                   <TextInput
+                    style={styles.emailInput}
                     secureTextEntry={false}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     placeholder="you@example.com"
                     placeholderTextColor="#A0A0A0"
+                    value={email}
+                    onChangeText={setEmail}
                   />
                 </View>
               </View>
@@ -69,6 +108,8 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     placeholder="••••••••"
                     placeholderTextColor="#A0A0A0"
+                    value={password}
+                    onChangeText={setPassword}
                   />
                   <Pressable>
                     <MaterialCommunityIcons
@@ -86,7 +127,9 @@ export default function LoginScreen() {
               </Pressable>
 
               <Pressable style={styles.loginButton}>
-                <Text style={styles.loginButtonText}>Log In</Text>
+                <Text style={styles.loginButtonText} onPress={logIn}>
+                  Log In
+                </Text>
               </Pressable>
 
               <View style={styles.footerContainer}>
@@ -94,7 +137,7 @@ export default function LoginScreen() {
                 <Pressable>
                   <Text
                     style={styles.signupText}
-                    onPress={() => router.push("/register")}
+                    onPress={() => router.push("/components/register")}
                   >
                     Register
                   </Text>
@@ -191,6 +234,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   passwordInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 14,
+    color: "#1A1A1A",
+  },
+  emailInput: {
     flex: 1,
     paddingVertical: 14,
     fontSize: 14,

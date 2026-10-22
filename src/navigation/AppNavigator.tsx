@@ -2,7 +2,8 @@ import { createStaticNavigation } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import LoginScreen from "@/app";
-import RegisterScreen from "@/components/register";
+import HomeScreen from "@/app/components/home";
+import RegisterScreen from "@/app/components/register";
 
 const RootStack = createNativeStackNavigator({
   screens: {
@@ -11,6 +12,9 @@ const RootStack = createNativeStackNavigator({
     },
     Register: {
       screen: RegisterScreen,
+    },
+    Home: {
+      screen: HomeScreen,
     },
   },
 });
