@@ -17,18 +17,6 @@ export interface ProductItem {
 }
 
 export interface UserInfo {
-  address: string;
-  cardExpiryMonth: string;
-  cardExpiryYear: string;
-  cardNum: string;
-  cvv: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-}
-
-export interface UserAccount {
   id?: number;
   address: string;
   cardExpiryMonth: string;
@@ -39,6 +27,7 @@ export interface UserAccount {
   firstName: string;
   lastName: string;
   phone: string;
+  userImage: string;
   orders: ProductItem[];
   wishList: ProductItem[];
 }

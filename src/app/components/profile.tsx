@@ -1,7 +1,11 @@
+import { UserInfo } from "@/types/types";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -11,9 +15,28 @@ import {
 } from "react-native";
 import NavList from "./nav";
 export default function ProfileScreen() {
-  const [profileImage, setProfileImage] = useState<string>(
-    "https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-unknown-social-media-user-photo-default-avatar-profile-icon-vector-unknown-social-media-user-184816085.jpg",
-  );
+  const [user, setUser] = useState<UserInfo>();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      let userId = 0;
+      const getUserId: string | null = await AsyncStorage.getItem("userId");
+      if (getUserId != null) userId = parseInt(getUserId);
+
+      const usersApi = process.env.EXPO_PUBLIC_USERS;
+      if (!usersApi) return undefined;
+      const res = await fetch(usersApi);
+      const data = await res.json();
+      const allUsers: UserInfo[] = data;
+      const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
+
+      if (user.length == 0) Alert.alert("coudn't fetch user data");
+      else setUser(user[0]);
+    };
+
+    fetchUserData();
+  }, [user]);
+
   const handlePickImage = async () => {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -24,14 +47,44 @@ export default function ProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setProfileImage(result.assets[0].uri);
+      let userId = 0;
+      const getUserId: string | null = await AsyncStorage.getItem("userId");
+      if (getUserId != null) userId = parseInt(getUserId);
+      const usersApi = process.env.EXPO_PUBLIC_USERS;
+      if (!usersApi) return undefined;
+      const resUser = await fetch(usersApi);
+      const dataUser = await resUser.json();
+      const allUsers: UserInfo[] = dataUser;
+      const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
+      if (user.length == 0) Alert.alert("coudn't fetch user data");
+
+      user[0].userImage = result.assets[0].uri;
+
+      const updatedUserImage = {
+        ...user[0],
+      };
+
+      const updateUserImage = await fetch(
+        `${process.env.EXPO_PUBLIC_USERS}/${user[0].id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedUserImage),
+        },
+      );
+
+      if (!updateUserImage.ok) Alert.alert("Failed to update database");
+
+      Alert.alert("Image has been edited to successfully");
     }
   };
   return (
@@ -44,17 +97,29 @@ export default function ProfileScreen() {
 
         <View style={styles.profileHeaderContainer}>
           <Pressable onPress={handlePickImage} style={styles.imageWrapper}>
-            <Image source={{ uri: profileImage }} style={styles.avatar} />
+            <Image
+              source={{
+                uri: user?.userImage
+                  ? user.userImage
+                  : "https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-unknown-social-media-user-photo-default-avatar-profile-icon-vector-unknown-social-media-user-184816085.jpg",
+              }}
+              style={styles.avatar}
+            />
             <View style={styles.cameraBadge}>
               <MaterialCommunityIcons name="camera" color="#FFFFFF" size={14} />
             </View>
           </Pressable>
-          <Text style={styles.userName}>firstName lastName</Text>
-          <Text style={styles.userEmail}>email</Text>
+          <Text style={styles.userName}>
+            {user?.firstName} {user?.lastName}
+          </Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
         </View>
 
         <View style={styles.menuContainer}>
-          <Pressable style={styles.menuItem}>
+          <Pressable
+            style={styles.menuItem}
+            onPress={() => router.replace("/components/EditProfileScreen")}
+          >
             <View style={styles.menuLeft}>
               <View style={styles.iconBox}>
                 <MaterialCommunityIcons
@@ -95,7 +160,7 @@ export default function ProfileScreen() {
 
           <Pressable
             style={styles.menuItem}
-            onPress={() => navigation.navigate("Settings")}
+            onPress={() => router.replace("/components/SettingsScreen")}
           >
             <View style={styles.menuLeft}>
               <View style={styles.iconBox}>
@@ -139,7 +204,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 30,
   },
   scrollContainer: {
     paddingHorizontal: 16,

@@ -1,10 +1,10 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,13 +14,11 @@ import {
 } from "react-native";
 
 import { LoginCredentials } from "@/types/types";
-import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
   const [password, setPassword] = useState<string>("");
   const [email, setEmail] = useState<string>("");
 
-  const router = useRouter();
   const [visibility, setVisibility] = useState<boolean>(true);
 
   const changeVisibility = () => {
@@ -52,16 +50,13 @@ export default function LoginScreen() {
       else {
         if (userLoginCredentials[0].id == 0) return;
         await AsyncStorage.setItem("userId", `${userLoginCredentials[0].id}`);
-        router.push("/components/home");
+        router.replace("/components/home");
       }
     }
   };
   return (
     <View style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
-      >
+      <KeyboardAvoidingView style={styles.keyboardView}>
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
@@ -137,7 +132,7 @@ export default function LoginScreen() {
                 <Pressable>
                   <Text
                     style={styles.signupText}
-                    onPress={() => router.push("/components/register")}
+                    onPress={() => router.replace("/components/register")}
                   >
                     Register
                   </Text>

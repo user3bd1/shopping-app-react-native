@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -12,12 +13,7 @@ import {
   View,
 } from "react-native";
 
-import {
-  Dimension,
-  LoginCredentials,
-  ProductItem,
-  UserAccount,
-} from "@/types/types";
+import { LoginCredentials, UserInfo } from "@/types/types";
 
 export default function RegisterScreen() {
   const [visibility, setVisibility] = useState<boolean>(true);
@@ -36,24 +32,7 @@ export default function RegisterScreen() {
   const [isFilledpassword, setisFilledPassword] = useState<boolean>(true);
 
   const senddata = async () => {
-    const dimension: Dimension = {
-      width: 0,
-      height: 0,
-      depth: 0,
-    };
-
-    const productItem: ProductItem = {
-      brand: "",
-      category: "",
-      description: "",
-      title: "",
-      dimensions: dimension,
-      price: 0,
-      weight: 0,
-      images: [],
-    };
-
-    const newUser: UserAccount = {
+    const newUser: UserInfo = {
       address: address,
       cardExpiryMonth: "",
       cardExpiryYear: "",
@@ -63,8 +42,9 @@ export default function RegisterScreen() {
       firstName: firstName,
       lastName: lastName,
       phone: phone,
-      orders: [productItem],
-      wishList: [productItem],
+      userImage: "",
+      orders: [],
+      wishList: [],
     };
 
     const newLoginCredentials: LoginCredentials = {
@@ -128,6 +108,7 @@ export default function RegisterScreen() {
       setPhone("");
 
       Alert.alert("you have successfully registerd your account");
+      router.replace("/");
     }
   };
 
@@ -265,7 +246,7 @@ export default function RegisterScreen() {
                           !/[a-z]/.test(password) ||
                           !/[A-Z]/.test(password) ||
                           !/\d/.test(password) ||
-                          isFilledpassword)
+                          !isFilledpassword)
                           ? "red"
                           : "#E5E5E5",
                     },

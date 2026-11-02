@@ -1,8 +1,16 @@
-import { ProductItem, UserAccount } from "@/types/types";
+import { ProductItem, UserInfo } from "@/types/types";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
-import { Alert, FlatList, Image, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import NavList from "./nav";
 
 export default function OrdersScreen() {
@@ -18,9 +26,9 @@ export default function OrdersScreen() {
       if (!usersApi) return undefined;
       const res = await fetch(usersApi);
       const data = await res.json();
-      const allUsers: UserAccount[] = data;
-      const user: UserAccount[] = allUsers.filter((p) => p.id == userId);
-      if (user.length == 0) Alert.alert("coudn't fetch user data");
+      const allUsers: UserInfo[] = data;
+      const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
+      if (user.length == 0) Alert.alert("Couldn't fetch user data");
       else {
         setOrders(user[0].orders);
       }
@@ -37,9 +45,9 @@ export default function OrdersScreen() {
     if (!usersApi) return undefined;
     const resUser = await fetch(usersApi);
     const dataUser = await resUser.json();
-    const allUsers: UserAccount[] = dataUser;
-    const user: UserAccount[] = allUsers.filter((p) => p.id == userId);
-    if (user.length == 0) Alert.alert("coudn't fetch user data");
+    const allUsers: UserInfo[] = dataUser;
+    const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
+    if (user.length == 0) return Alert.alert("Couldn't fetch user data");
 
     const newOrders: ProductItem[] = user[0].orders.filter((p) => p.id !== id);
     const updatedUserObject = {
@@ -47,7 +55,7 @@ export default function OrdersScreen() {
       orders: newOrders,
     };
 
-    const updateUserWishList = await fetch(
+    const updateUserOrders = await fetch(
       `${process.env.EXPO_PUBLIC_USERS}/${user[0].id}`,
       {
         method: "PUT",
@@ -58,10 +66,18 @@ export default function OrdersScreen() {
       },
     );
 
-    if (!updateUserWishList.ok) Alert.alert("Failed to update database");
-
-    Alert.alert("Product has been deleted from your orders list successfully");
+    if (!updateUserOrders.ok) {
+      Alert.alert("Failed to update database");
+    } else {
+      setOrders(newOrders);
+      Alert.alert(
+        "Product has been deleted from your orders list successfully",
+      );
+    }
   };
+
+  const totalPrice = orders.reduce((sum, item) => sum + (item.price || 0), 0);
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
@@ -71,11 +87,14 @@ export default function OrdersScreen() {
 
       <FlatList
         data={orders}
-        keyExtractor={(p) => p.id!.toString()}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-        renderItem={({ item: p, index }) => (
-          <View style={styles.card} key={index}>
+        contentContainerStyle={[
+          styles.listContainer,
+
+          orders.length > 0 ? { paddingBottom: 160 } : { paddingBottom: 90 },
+        ]}
+        renderItem={({ item: p }) => (
+          <View style={styles.card} key={p.id}>
             <View style={styles.orderTopRow}>
               <Text style={styles.orderIdText}>Order #{p.id}</Text>
               <MaterialCommunityIcons
@@ -114,6 +133,28 @@ export default function OrdersScreen() {
           </View>
         )}
       />
+
+      {orders.length > 0 && (
+        <View style={styles.checkoutContainer}>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total Payment</Text>
+            <Text style={styles.totalPrice}>{totalPrice.toFixed(2)} €</Text>
+          </View>
+
+          <Pressable
+            style={styles.payButton}
+            onPress={() => Alert.alert("Proceeding to payment...")}
+          >
+            <Text style={styles.payButtonText}>Proceed to Payment</Text>
+            <MaterialCommunityIcons
+              name="arrow-right"
+              color="#FFFFFF"
+              size={20}
+            />
+          </Pressable>
+        </View>
+      )}
+
       <NavList />
     </View>
   );
@@ -164,7 +205,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#5B1D88",
   },
-
   divider: {
     height: 1,
     backgroundColor: "#EFEFF1",
@@ -207,5 +247,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     color: "#5B1D88",
+  },
+
+  checkoutContainer: {
+    position: "absolute",
+    bottom: 120,
+    left: 0,
+    right: 0,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#EFEFF1",
+    zIndex: 5,
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: "#8E8E93",
+    fontWeight: "600",
+  },
+  totalPrice: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1C1C1E",
+  },
+  payButton: {
+    backgroundColor: "#5B1D88",
+    borderRadius: 12,
+    height: 48,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  payButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginRight: 8,
   },
 });

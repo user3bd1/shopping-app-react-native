@@ -1,4 +1,4 @@
-import { Product, ProductItem, UserAccount } from "@/types/types";
+import { Product, ProductItem, UserInfo } from "@/types/types";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -25,8 +25,8 @@ export default function WishListScreen() {
       if (!usersApi) return undefined;
       const res = await fetch(usersApi);
       const data = await res.json();
-      const allUsers: UserAccount[] = data;
-      const user: UserAccount[] = allUsers.filter((p) => p.id == userId);
+      const allUsers: UserInfo[] = data;
+      const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
       if (user.length == 0) Alert.alert("coudn't fetch user data");
       else {
         setWishList(user[0].wishList);
@@ -44,8 +44,8 @@ export default function WishListScreen() {
     if (!usersApi) return undefined;
     const resUser = await fetch(usersApi);
     const dataUser = await resUser.json();
-    const allUsers: UserAccount[] = dataUser;
-    const user: UserAccount[] = allUsers.filter((p) => p.id == userId);
+    const allUsers: UserInfo[] = dataUser;
+    const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
     if (user.length == 0) Alert.alert("coudn't fetch user data");
 
     const productsApi = process.env.EXPO_PUBLIC_PRODUCTSAPI;
@@ -84,8 +84,8 @@ export default function WishListScreen() {
     if (!usersApi) return undefined;
     const resUser = await fetch(usersApi);
     const dataUser = await resUser.json();
-    const allUsers: UserAccount[] = dataUser;
-    const user: UserAccount[] = allUsers.filter((p) => p.id == userId);
+    const allUsers: UserInfo[] = dataUser;
+    const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
     if (user.length == 0) Alert.alert("coudn't fetch user data");
 
     const newWishList: ProductItem[] = user[0].wishList.filter(
