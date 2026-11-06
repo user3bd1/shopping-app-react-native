@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, usePathname } from "expo-router";
+import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface navBarItems {
@@ -9,7 +11,7 @@ interface navBarItems {
   iconOutline: string;
   activeTab: boolean;
 }
-[, "wishList", "orders", "profile"];
+
 const navItems: navBarItems[] = [
   {
     id: 1,
@@ -42,13 +44,35 @@ const navItems: navBarItems[] = [
 ];
 
 export default function NavList() {
+  const [thema, setThema] = useState<string>("light");
+
+  useEffect(() => {
+    const fetchTheme = async () => {
+      const savedTheme = await AsyncStorage.getItem("thema");
+      if (savedTheme) {
+        setThema(savedTheme);
+      }
+    };
+    fetchTheme();
+  }, []);
+
+  const isDark = thema === "dark";
+
   const renderNavItem = ({ item }: { item: navBarItems }) => {
     const pathname = usePathname();
     const isActive = pathname === `/components/${item.router}`;
 
     return (
       <Link href={`/components/${item.router}` as any} asChild>
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={StyleSheet.flatten([
+            styles.navItem,
+            isDark && styles.navItemDark,
+            isActive &&
+              (isDark ? styles.activeNavItemDark : styles.activeNavItem),
+          ])}
+          activeOpacity={0.7}
+        >
           <Ionicons
             name={
               (isActive
@@ -56,7 +80,15 @@ export default function NavList() {
                 : item.iconOutline) as keyof typeof Ionicons.glyphMap
             }
             size={20}
-            color={isActive ? "#5B1D88" : "#495057"}
+            color={
+              isActive
+                ? isDark
+                  ? "#D0BCFF"
+                  : "#5B1D88"
+                : isDark
+                  ? "#A0A0A5"
+                  : "#495057"
+            }
           />
         </TouchableOpacity>
       </Link>
@@ -64,7 +96,12 @@ export default function NavList() {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={StyleSheet.flatten([
+        styles.container,
+        isDark && styles.containerDark,
+      ])}
+    >
       <FlatList
         data={navItems}
         renderItem={renderNavItem}
@@ -91,6 +128,10 @@ const styles = StyleSheet.create({
     left: -20,
     borderColor: "#000",
   },
+  containerDark: {
+    backgroundColor: "#121212",
+    borderTopColor: "#2C2C30",
+  },
   listContainer: {
     paddingHorizontal: 40,
     paddingVertical: 25,
@@ -111,26 +152,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     marginLeft: 1,
   },
+  navItemDark: {
+    backgroundColor: "#1E1E22",
+    borderColor: "#2C2C30",
+  },
   activeNavItem: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-
-    shadowColor: "#007AFF",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: "#EAE2F8",
+    borderColor: "#5B1D88",
   },
-  icon: {
-    marginRight: 6,
-  },
-  navText: {
-    fontSize: 14,
-    color: "#6c757d",
-    fontWeight: "500",
-  },
-  activeNavText: {
-    color: "#ffffff",
-    fontWeight: "600",
+  activeNavItemDark: {
+    backgroundColor: "#2B223F",
+    borderColor: "#D0BCFF",
   },
 });

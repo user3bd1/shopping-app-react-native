@@ -16,6 +16,10 @@ export interface ProductItem {
   images: string[];
 }
 
+interface OrderdOrders {
+  OrderdOrders: Record<string, OrderdOrders>;
+}
+
 export interface UserInfo {
   id?: number;
   address: string;
@@ -30,6 +34,9 @@ export interface UserInfo {
   userImage: string;
   orders: ProductItem[];
   wishList: ProductItem[];
+  orderdOrders: {
+    [key: string]: OrderdOrders;
+  };
 }
 export interface LoginCredentials {
   id?: number;
@@ -45,13 +52,6 @@ export interface Review {
   reviewerEmail: string;
 }
 
-export interface ProductMeta {
-  createdAt: string;
-  updatedAt: string;
-  barcode: string;
-  qrCode: string;
-}
-
 export interface Product {
   id: number;
   title: string;
@@ -65,14 +65,13 @@ export interface Product {
   brand: string;
   sku: string;
   weight: number;
-  dimensions: Dimension;
+  dimensions: { width: number; height: number; depth: number };
   warrantyInformation: string;
   shippingInformation: string;
   availabilityStatus: string;
   reviews: Review[];
   returnPolicy: string;
   minimumOrderQuantity: number;
-  meta: ProductMeta;
   images: string[];
   thumbnail: string;
 }

@@ -15,12 +15,18 @@ import NavList from "./nav";
 
 export default function OrdersScreen() {
   const [orders, setOrders] = useState<ProductItem[]>([]);
+  const [thema, setThema] = useState<string>("light");
 
   useEffect(() => {
     const getWishList = async () => {
       let userId = 0;
       const getUserId: string | null = await AsyncStorage.getItem("userId");
       if (getUserId != null) userId = parseInt(getUserId);
+
+      const savedTheme = await AsyncStorage.getItem("thema");
+      if (savedTheme) {
+        setThema(savedTheme);
+      }
 
       const usersApi = process.env.EXPO_PUBLIC_USERS;
       if (!usersApi) return undefined;
@@ -30,12 +36,12 @@ export default function OrdersScreen() {
       const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
       if (user.length == 0) Alert.alert("Couldn't fetch user data");
       else {
-        setOrders(user[0].orders);
+        setOrders(user[0].orders || []);
       }
     };
 
     getWishList();
-  }, [orders]);
+  }, []);
 
   const deleteFromOrders = async (id: number) => {
     let userId = 0;
@@ -77,12 +83,17 @@ export default function OrdersScreen() {
   };
 
   const totalPrice = orders.reduce((sum, item) => sum + (item.price || 0), 0);
+  const isDark = thema === "dark";
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.containerDark]}>
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>My Orders</Text>
-        <Text style={styles.itemCount}>{orders.length} orders</Text>
+        <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>
+          My Orders
+        </Text>
+        <Text style={[styles.itemCount, isDark && styles.itemCountDark]}>
+          {orders.length} orders
+        </Text>
       </View>
 
       <FlatList
@@ -90,13 +101,16 @@ export default function OrdersScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContainer,
-
           orders.length > 0 ? { paddingBottom: 160 } : { paddingBottom: 90 },
         ]}
         renderItem={({ item: p }) => (
-          <View style={styles.card} key={p.id}>
+          <View style={[styles.card, isDark && styles.cardDark]} key={p.id}>
             <View style={styles.orderTopRow}>
-              <Text style={styles.orderIdText}>Order #{p.id}</Text>
+              <Text
+                style={[styles.orderIdText, isDark && styles.orderIdTextDark]}
+              >
+                Order #{p.id}
+              </Text>
               <MaterialCommunityIcons
                 name="trash-can-outline"
                 color="#FF3B30"
@@ -105,7 +119,7 @@ export default function OrdersScreen() {
               />
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, isDark && styles.dividerDark]} />
 
             <View style={styles.productRow}>
               <Image
@@ -115,19 +129,32 @@ export default function OrdersScreen() {
                       ? p.images[0]
                       : "https://via.placeholder.com/100",
                 }}
-                style={styles.image}
+                style={[styles.image, isDark && styles.imageDark]}
                 resizeMode="contain"
               />
 
               <View style={styles.detailsContainer}>
                 <Text style={styles.brandText}>{p.brand}</Text>
-                <Text style={styles.titleText} numberOfLines={1}>
+                <Text
+                  style={[styles.titleText, isDark && styles.titleTextDark]}
+                  numberOfLines={1}
+                >
                   {p.title}
                 </Text>
-                <Text style={styles.descriptionText} numberOfLines={2}>
+                <Text
+                  style={[
+                    styles.descriptionText,
+                    isDark && styles.descriptionTextDark,
+                  ]}
+                  numberOfLines={2}
+                >
                   {p.description}
                 </Text>
-                <Text style={styles.priceText}>{p.price} €</Text>
+                <Text
+                  style={[styles.priceText, isDark && styles.priceTextDark]}
+                >
+                  {p.price} €
+                </Text>
               </View>
             </View>
           </View>
@@ -135,14 +162,23 @@ export default function OrdersScreen() {
       />
 
       {orders.length > 0 && (
-        <View style={styles.checkoutContainer}>
+        <View
+          style={[
+            styles.checkoutContainer,
+            isDark && styles.checkoutContainerDark,
+          ]}
+        >
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Payment</Text>
-            <Text style={styles.totalPrice}>{totalPrice.toFixed(2)} €</Text>
+            <Text style={[styles.totalLabel, isDark && styles.totalLabelDark]}>
+              Total Payment
+            </Text>
+            <Text style={[styles.totalPrice, isDark && styles.totalPriceDark]}>
+              {totalPrice.toFixed(2)} €
+            </Text>
           </View>
 
           <Pressable
-            style={styles.payButton}
+            style={[styles.payButton, isDark && styles.payButtonDark]}
             onPress={() => Alert.alert("Proceeding to payment...")}
           >
             <Text style={styles.payButtonText}>Proceed to Payment</Text>
@@ -167,6 +203,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
   },
+  containerDark: {
+    backgroundColor: "#121212",
+  },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -178,10 +217,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1C1C1E",
   },
+  headerTitleDark: {
+    color: "#F4F4F4",
+  },
   itemCount: {
     fontSize: 14,
     color: "#8E8E93",
     fontWeight: "600",
+  },
+  itemCountDark: {
+    color: "#A0A0A5",
   },
   listContainer: {
     paddingBottom: 40,
@@ -194,6 +239,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EFEFF1",
   },
+  cardDark: {
+    backgroundColor: "#1E1E22",
+    borderColor: "#2C2C30",
+  },
   orderTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -205,10 +254,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#5B1D88",
   },
+  orderIdTextDark: {
+    color: "#D0BCFF",
+  },
   divider: {
     height: 1,
     backgroundColor: "#EFEFF1",
     marginBottom: 12,
+  },
+  dividerDark: {
+    backgroundColor: "#2C2C30",
   },
   productRow: {
     flexDirection: "row",
@@ -220,6 +275,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
     marginRight: 12,
+  },
+  imageDark: {
+    backgroundColor: "#2C2C30",
   },
   detailsContainer: {
     flex: 1,
@@ -238,17 +296,25 @@ const styles = StyleSheet.create({
     color: "#1C1C1E",
     marginBottom: 2,
   },
+  titleTextDark: {
+    color: "#E0E0E0",
+  },
   descriptionText: {
     fontSize: 11,
     color: "#636366",
     marginBottom: 6,
+  },
+  descriptionTextDark: {
+    color: "#A0A0A5",
   },
   priceText: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#5B1D88",
   },
-
+  priceTextDark: {
+    color: "#D0BCFF",
+  },
   checkoutContainer: {
     position: "absolute",
     bottom: 120,
@@ -261,6 +327,10 @@ const styles = StyleSheet.create({
     borderTopColor: "#EFEFF1",
     zIndex: 5,
   },
+  checkoutContainerDark: {
+    backgroundColor: "#121212",
+    borderTopColor: "#2C2C30",
+  },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -272,10 +342,16 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
     fontWeight: "600",
   },
+  totalLabelDark: {
+    color: "#A0A0A5",
+  },
   totalPrice: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#1C1C1E",
+  },
+  totalPriceDark: {
+    color: "#F4F4F4",
   },
   payButton: {
     backgroundColor: "#5B1D88",
@@ -284,6 +360,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+  },
+  payButtonDark: {
+    backgroundColor: "#7D3CB5",
   },
   payButtonText: {
     color: "#FFFFFF",

@@ -14,8 +14,10 @@ import {
   View,
 } from "react-native";
 import NavList from "./nav";
+
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserInfo>();
+  const [thema, setThema] = useState<string>("light");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -23,19 +25,24 @@ export default function ProfileScreen() {
       const getUserId: string | null = await AsyncStorage.getItem("userId");
       if (getUserId != null) userId = parseInt(getUserId);
 
+      const savedTheme = await AsyncStorage.getItem("thema");
+      if (savedTheme) {
+        setThema(savedTheme);
+      }
+
       const usersApi = process.env.EXPO_PUBLIC_USERS;
       if (!usersApi) return undefined;
       const res = await fetch(usersApi);
       const data = await res.json();
       const allUsers: UserInfo[] = data;
-      const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
+      const foundUser = allUsers.find((p) => p.id === userId);
 
-      if (user.length == 0) Alert.alert("coudn't fetch user data");
-      else setUser(user[0]);
+      if (!foundUser) Alert.alert("Couldn't fetch user data");
+      else setUser(foundUser);
     };
 
     fetchUserData();
-  }, [user]);
+  }, []);
 
   const handlePickImage = async () => {
     const permissionResult =
@@ -54,46 +61,45 @@ export default function ProfileScreen() {
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      let userId = 0;
-      const getUserId: string | null = await AsyncStorage.getItem("userId");
-      if (getUserId != null) userId = parseInt(getUserId);
-      const usersApi = process.env.EXPO_PUBLIC_USERS;
-      if (!usersApi) return undefined;
-      const resUser = await fetch(usersApi);
-      const dataUser = await resUser.json();
-      const allUsers: UserInfo[] = dataUser;
-      const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
-      if (user.length == 0) Alert.alert("coudn't fetch user data");
+      if (!user) return;
 
-      user[0].userImage = result.assets[0].uri;
-
-      const updatedUserImage = {
-        ...user[0],
+      const updatedUser = {
+        ...user,
+        userImage: result.assets[0].uri,
       };
 
-      const updateUserImage = await fetch(
-        `${process.env.EXPO_PUBLIC_USERS}/${user[0].id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatedUserImage),
+      const usersApi = process.env.EXPO_PUBLIC_USERS;
+      if (!usersApi) return;
+
+      const updateUserImage = await fetch(`${usersApi}/${user.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify(updatedUser),
+      });
 
-      if (!updateUserImage.ok) Alert.alert("Failed to update database");
+      if (!updateUserImage.ok) {
+        Alert.alert("Failed to update database");
+        return;
+      }
 
-      Alert.alert("Image has been edited to successfully");
+      setUser(updatedUser);
+      Alert.alert("Image has been edited successfully");
     }
   };
+
+  const isDark = thema === "dark";
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.containerDark]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
       >
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>
+          Profile
+        </Text>
 
         <View style={styles.profileHeaderContainer}>
           <Pressable onPress={handlePickImage} style={styles.imageWrapper}>
@@ -103,85 +109,102 @@ export default function ProfileScreen() {
                   ? user.userImage
                   : "https://thumbs.dreamstime.com/b/default-avatar-profile-icon-vector-unknown-social-media-user-photo-default-avatar-profile-icon-vector-unknown-social-media-user-184816085.jpg",
               }}
-              style={styles.avatar}
+              style={[styles.avatar, isDark && styles.avatarDark]}
             />
-            <View style={styles.cameraBadge}>
-              <MaterialCommunityIcons name="camera" color="#FFFFFF" size={14} />
+            <View
+              style={[styles.cameraBadge, isDark && styles.cameraBadgeDark]}
+            >
+              <MaterialCommunityIcons
+                name="camera"
+                color={isDark ? "#121212" : "#FFFFFF"}
+                size={14}
+              />
             </View>
           </Pressable>
-          <Text style={styles.userName}>
+          <Text style={[styles.userName, isDark && styles.userNameDark]}>
             {user?.firstName} {user?.lastName}
           </Text>
-          <Text style={styles.userEmail}>{user?.email}</Text>
+          <Text style={[styles.userEmail, isDark && styles.userEmailDark]}>
+            {user?.email}
+          </Text>
         </View>
 
-        <View style={styles.menuContainer}>
+        <View
+          style={[styles.menuContainer, isDark && styles.menuContainerDark]}
+        >
           <Pressable
-            style={styles.menuItem}
-            onPress={() => router.replace("/components/EditProfileScreen")}
+            style={[styles.menuItem, isDark && styles.menuItemDark]}
+            onPress={() => router.push("/components/EditProfileScreen")}
           >
             <View style={styles.menuLeft}>
-              <View style={styles.iconBox}>
+              <View style={[styles.iconBox, isDark && styles.iconBoxDark]}>
                 <MaterialCommunityIcons
                   name="account-outline"
-                  color="#5B1D88"
+                  color={isDark ? "#D0BCFF" : "#5B1D88"}
                   size={20}
                 />
               </View>
-              <Text style={styles.menuText}>My Profile</Text>
+              <Text style={[styles.menuText, isDark && styles.menuTextDark]}>
+                My Profile
+              </Text>
             </View>
             <MaterialCommunityIcons
               name="chevron-right"
-              color="#8E8E93"
+              color={isDark ? "#A0A0A5" : "#8E8E93"}
               size={20}
             />
           </Pressable>
 
-          <Pressable
-            style={styles.menuItem}
-            onPress={() => navigation.navigate("Orders")}
-          >
+          <Pressable style={[styles.menuItem, isDark && styles.menuItemDark]}>
             <View style={styles.menuLeft}>
-              <View style={styles.iconBox}>
+              <View style={[styles.iconBox, isDark && styles.iconBoxDark]}>
                 <MaterialCommunityIcons
                   name="shopping-outline"
-                  color="#5B1D88"
+                  color={isDark ? "#D0BCFF" : "#5B1D88"}
                   size={20}
                 />
               </View>
-              <Text style={styles.menuText}>My Orders</Text>
+              <Text style={[styles.menuText, isDark && styles.menuTextDark]}>
+                My Orders
+              </Text>
             </View>
             <MaterialCommunityIcons
               name="chevron-right"
-              color="#8E8E93"
+              color={isDark ? "#A0A0A5" : "#8E8E93"}
               size={20}
             />
           </Pressable>
 
           <Pressable
-            style={styles.menuItem}
-            onPress={() => router.replace("/components/SettingsScreen")}
+            style={[
+              styles.menuItem,
+              isDark && styles.menuItemDark,
+              { borderBottomWidth: 0 },
+            ]}
+            onPress={() => router.push("/components/SettingsScreen")}
           >
             <View style={styles.menuLeft}>
-              <View style={styles.iconBox}>
+              <View style={[styles.iconBox, isDark && styles.iconBoxDark]}>
                 <MaterialCommunityIcons
                   name="cog-outline"
-                  color="#5B1D88"
+                  color={isDark ? "#D0BCFF" : "#5B1D88"}
                   size={20}
                 />
               </View>
-              <Text style={styles.menuText}>Settings</Text>
+              <Text style={[styles.menuText, isDark && styles.menuTextDark]}>
+                Settings
+              </Text>
             </View>
             <MaterialCommunityIcons
               name="chevron-right"
-              color="#8E8E93"
+              color={isDark ? "#A0A0A5" : "#8E8E93"}
               size={20}
             />
           </Pressable>
         </View>
 
         <Pressable
-          style={styles.logoutButton}
+          style={[styles.logoutButton, isDark && styles.logoutButtonDark]}
           onPress={() => console.log("Logged out")}
         >
           <MaterialCommunityIcons
@@ -206,6 +229,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 30,
   },
+  containerDark: {
+    backgroundColor: "#121212",
+  },
   scrollContainer: {
     paddingHorizontal: 16,
     paddingTop: 20,
@@ -216,6 +242,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1C1C1E",
     marginBottom: 20,
+  },
+  headerTitleDark: {
+    color: "#F4F4F4",
   },
   profileHeaderContainer: {
     alignItems: "center",
@@ -233,6 +262,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#5B1D88",
   },
+  avatarDark: {
+    backgroundColor: "#1E1E22",
+    borderColor: "#D0BCFF",
+  },
   cameraBadge: {
     position: "absolute",
     bottom: 0,
@@ -246,15 +279,25 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#FFFFFF",
   },
+  cameraBadgeDark: {
+    backgroundColor: "#D0BCFF",
+    borderColor: "#121212",
+  },
   userName: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#1C1C1E",
     marginBottom: 4,
   },
+  userNameDark: {
+    color: "#F4F4F4",
+  },
   userEmail: {
     fontSize: 14,
     color: "#8E8E93",
+  },
+  userEmailDark: {
+    color: "#A0A0A5",
   },
   menuContainer: {
     backgroundColor: "#F8F8FA",
@@ -265,6 +308,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EFEFF1",
   },
+  menuContainerDark: {
+    backgroundColor: "#1E1E22",
+    borderColor: "#2C2C30",
+  },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -272,6 +319,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#EFEFF1",
+  },
+  menuItemDark: {
+    borderBottomColor: "#2C2C30",
   },
   menuLeft: {
     flexDirection: "row",
@@ -286,10 +336,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
+  iconBoxDark: {
+    backgroundColor: "#2B223F",
+  },
   menuText: {
     fontSize: 15,
     fontWeight: "600",
     color: "#1C1C1E",
+  },
+  menuTextDark: {
+    color: "#E0E0E0",
   },
   logoutButton: {
     flexDirection: "row",
@@ -300,6 +356,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderWidth: 1,
     borderColor: "#FFD7D5",
+  },
+  logoutButtonDark: {
+    backgroundColor: "#2A1818",
+    borderColor: "#4A2222",
   },
   logoutText: {
     color: "#FF3B30",

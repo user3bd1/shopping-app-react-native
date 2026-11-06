@@ -1,6 +1,5 @@
 import { Product, ProductItem, UserInfo } from "@/types/types";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import {
@@ -13,28 +12,36 @@ import {
   View,
 } from "react-native";
 import NavList from "./nav";
+
 export default function WishListScreen() {
   const [wishList, setWishList] = useState<ProductItem[]>([]);
+  const [thema, setThema] = useState<string>("light");
 
   useEffect(() => {
     const getWishList = async () => {
       let userId = 0;
       const getUserId: string | null = await AsyncStorage.getItem("userId");
       if (getUserId != null) userId = parseInt(getUserId);
+
+      const savedTheme = await AsyncStorage.getItem("thema");
+      if (savedTheme) {
+        setThema(savedTheme);
+      }
+
       const usersApi = process.env.EXPO_PUBLIC_USERS;
       if (!usersApi) return undefined;
       const res = await fetch(usersApi);
       const data = await res.json();
       const allUsers: UserInfo[] = data;
       const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
-      if (user.length == 0) Alert.alert("coudn't fetch user data");
+      if (user.length == 0) Alert.alert("Couldn't fetch user data");
       else {
-        setWishList(user[0].wishList);
+        setWishList(user[0].wishList || []);
       }
     };
 
     getWishList();
-  }, [wishList]);
+  }, []);
 
   const addToOrders = async (id: number) => {
     let userId = 0;
@@ -46,7 +53,7 @@ export default function WishListScreen() {
     const dataUser = await resUser.json();
     const allUsers: UserInfo[] = dataUser;
     const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
-    if (user.length == 0) Alert.alert("coudn't fetch user data");
+    if (user.length == 0) return Alert.alert("Couldn't fetch user data");
 
     const productsApi = process.env.EXPO_PUBLIC_PRODUCTSAPI;
     if (!productsApi) return undefined;
@@ -54,7 +61,9 @@ export default function WishListScreen() {
     const dataProduct: Product[] = await resProduct.json();
     const filteredData: ProductItem[] = dataProduct.filter((p) => p.id === id);
 
-    const newOrder = [...user[0].orders, filteredData[0]];
+    if (filteredData.length === 0) return;
+
+    const newOrder = [...(user[0].orders || []), filteredData[0]];
     const updatedUserObject = {
       ...user[0],
       orders: newOrder,
@@ -71,9 +80,14 @@ export default function WishListScreen() {
       },
     );
 
-    if (!updateUserOrders.ok) Alert.alert("Failed to update database");
-
-    Alert.alert("Product has been added to your orders list successfully");
+    if (!updateUserOrders.ok) {
+      Alert.alert("Failed to update database");
+    } else {
+      Alert.alert(
+        "Success",
+        "Product has been added to your orders list successfully",
+      );
+    }
   };
 
   const deleteFromWishList = async (id: number) => {
@@ -86,7 +100,7 @@ export default function WishListScreen() {
     const dataUser = await resUser.json();
     const allUsers: UserInfo[] = dataUser;
     const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
-    if (user.length == 0) Alert.alert("coudn't fetch user data");
+    if (user.length == 0) return Alert.alert("Couldn't fetch user data");
 
     const newWishList: ProductItem[] = user[0].wishList.filter(
       (p) => p.id !== id,
@@ -107,15 +121,28 @@ export default function WishListScreen() {
       },
     );
 
-    if (!updateUserWishList.ok) Alert.alert("Failed to update database");
-
-    Alert.alert("Product has been deleted from your wishlist successfully");
+    if (!updateUserWishList.ok) {
+      Alert.alert("Failed to update database");
+    } else {
+      setWishList(newWishList);
+      Alert.alert(
+        "Success",
+        "Product has been deleted from your wishlist successfully",
+      );
+    }
   };
+
+  const isDark = thema === "dark";
+
   return (
-    <View style={style.container}>
+    <View style={[style.container, isDark && style.containerDark]}>
       <View style={style.headerRow}>
-        <Text style={style.headerTitle}>My Wishlist</Text>
-        <Text style={style.itemCount}>{wishList.length} items</Text>
+        <Text style={[style.headerTitle, isDark && style.headerTitleDark]}>
+          My Wishlist
+        </Text>
+        <Text style={[style.itemCount, isDark && style.itemCountDark]}>
+          {wishList.length} items
+        </Text>
       </View>
 
       <View style={{ flex: 1 }}>
@@ -127,41 +154,48 @@ export default function WishListScreen() {
           contentContainerStyle={style.productsGrid}
           showsVerticalScrollIndicator={false}
           renderItem={({ item: p, index }) => (
-            <View style={style.productCard} key={index}>
+            <View
+              style={[style.productCard, isDark && style.productCardDark]}
+              key={index}
+            >
               <View
-                style={{ display: "flex", flexDirection: "row", padding: "5" }}
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  padding: 5,
+                  justifyContent: "space-between",
+                  width: "100%",
+                }}
               >
-                <Pressable>
+                <Pressable onPress={() => addToOrders(p.id!)}>
                   <MaterialCommunityIcons
-                    color="black"
+                    color={isDark ? "#D0BCFF" : "black"}
                     name="cart"
-                    size={24}
-                    style={{ left: -40 }}
-                    onPress={() => addToOrders(p.id!)}
+                    size={22}
                   />
                 </Pressable>
 
-                <Pressable>
-                  <Ionicons
-                    name="heart"
-                    size={24}
-                    color="red"
-                    style={{ right: -40 }}
-                    onPress={() => deleteFromWishList(p.id!)}
-                  />
+                <Pressable onPress={() => deleteFromWishList(p.id!)}>
+                  <Ionicons name="heart" size={22} color="red" />
                 </Pressable>
               </View>
               <Image
                 source={{ uri: `${p.images[0]}` }}
-                style={style.productImage}
+                style={[style.productImage, isDark && style.productImageDark]}
                 resizeMode="contain"
               />
 
-              <Text style={style.productTitle} numberOfLines={1}>
+              <Text
+                style={[style.productTitle, isDark && style.productTitleDark]}
+                numberOfLines={1}
+              >
                 {p.title}
               </Text>
-              <Text style={style.productPrice}>{p.price} Euro</Text>
-              <Pressable></Pressable>
+              <Text
+                style={[style.productPrice, isDark && style.productPriceDark]}
+              >
+                {p.price} Euro
+              </Text>
             </View>
           )}
         />
@@ -173,15 +207,14 @@ export default function WishListScreen() {
 }
 
 const style = StyleSheet.create({
-  addTocartBtn: {
-    left: -40,
-    top: 0,
-  },
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
     paddingTop: 50,
+  },
+  containerDark: {
+    backgroundColor: "#121212",
   },
   productsGrid: {
     paddingBottom: 20,
@@ -197,10 +230,16 @@ const style = StyleSheet.create({
     fontWeight: "bold",
     color: "#1C1C1E",
   },
+  headerTitleDark: {
+    color: "#F4F4F4",
+  },
   itemCount: {
     fontSize: 14,
     color: "#8E8E93",
     fontWeight: "600",
+  },
+  itemCountDark: {
+    color: "#A0A0A5",
   },
   row: {
     justifyContent: "space-between",
@@ -212,12 +251,22 @@ const style = StyleSheet.create({
     padding: 12,
     marginBottom: 15,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#EFEFF1",
+  },
+  productCardDark: {
+    backgroundColor: "#1E1E22",
+    borderColor: "#2C2C30",
   },
   productImage: {
     width: "100%",
     height: 120,
     borderRadius: 8,
     marginBottom: 10,
+    backgroundColor: "#FFFFFF",
+  },
+  productImageDark: {
+    backgroundColor: "#2C2C30",
   },
   productTitle: {
     fontSize: 14,
@@ -225,11 +274,17 @@ const style = StyleSheet.create({
     color: "#1A1A1A",
     flexShrink: 1,
   },
+  productTitleDark: {
+    color: "#E0E0E0",
+  },
   productPrice: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#1A1A1A",
     width: "100%",
     textAlign: "center",
+  },
+  productPriceDark: {
+    color: "#D0BCFF",
   },
 });
