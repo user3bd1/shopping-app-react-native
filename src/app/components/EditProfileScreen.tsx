@@ -16,6 +16,10 @@ import {
 export default function EditProfileScreen() {
   const [user, setUser] = useState<UserInfo>();
   const [thema, setThema] = useState<string>("");
+  const [cardNum, setCardNum] = useState<string>("");
+  const [cardExpMonth, setCardExpMonth] = useState<string>("");
+  const [cardExpYear, setCardExpYear] = useState<string>("");
+  const [cvv, setCvv] = useState<string>("");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -41,41 +45,6 @@ export default function EditProfileScreen() {
 
     fetchUserData();
   }, []);
-
-  const handleInputChange = (field: keyof UserInfo, value: string) => {
-    if (!user) return;
-    setUser({
-      ...user,
-      [field]: value,
-    });
-  };
-
-  const handleSave = async () => {
-    if (!user) return;
-
-    const usersApi = process.env.EXPO_PUBLIC_USERS;
-    if (!usersApi) return;
-
-    try {
-      const response = await fetch(`${usersApi}/${user.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(user),
-      });
-
-      if (!response.ok) {
-        Alert.alert("Error", "Failed to update profile in database");
-        return;
-      }
-
-      Alert.alert("Success", "Profile updated successfully!");
-      router.back();
-    } catch (error) {
-      Alert.alert("Error", "Something went wrong");
-    }
-  };
 
   const isDark = thema === "dark";
 
@@ -112,7 +81,6 @@ export default function EditProfileScreen() {
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           value={user?.firstName || ""}
-          onChangeText={(text) => handleInputChange("firstName", text)}
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
         />
 
@@ -122,7 +90,6 @@ export default function EditProfileScreen() {
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           value={user?.lastName || ""}
-          onChangeText={(text) => handleInputChange("lastName", text)}
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
         />
 
@@ -130,7 +97,6 @@ export default function EditProfileScreen() {
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           value={user?.email || ""}
-          onChangeText={(text) => handleInputChange("email", text)}
           autoCapitalize="none"
           keyboardType="email-address"
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
@@ -142,7 +108,6 @@ export default function EditProfileScreen() {
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           value={user?.phone || ""}
-          onChangeText={(text) => handleInputChange("phone", text)}
           keyboardType="phone-pad"
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
         />
@@ -151,7 +116,6 @@ export default function EditProfileScreen() {
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           value={user?.address || ""}
-          onChangeText={(text) => handleInputChange("address", text)}
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
         />
 
@@ -161,16 +125,52 @@ export default function EditProfileScreen() {
           Payment Details
         </Text>
 
+        {/* Real Bank Card Visual */}
+        <View style={styles.cardContainer}>
+          <View style={styles.cardTopRow}>
+            <View style={styles.chip} />
+            <MaterialCommunityIcons
+              name="contactless-payment"
+              size={28}
+              color="#FFFFFF"
+            />
+          </View>
+
+          <Text style={styles.cardNumberText}>{cardNum}</Text>
+
+          <View style={styles.cardBottomRow}>
+            <View style={styles.cardInfoGroup}>
+              <Text style={styles.cardLabel}>CARD HOLDER</Text>
+              <Text style={styles.cardValue} numberOfLines={1}>
+                {user?.firstName} {user?.lastName}
+              </Text>
+            </View>
+
+            <View style={styles.cardInfoGroup}>
+              <Text style={styles.cardLabel}>EXPIRES</Text>
+              <Text style={styles.cardValue}>
+                {cardExpMonth}/{cardExpYear}
+              </Text>
+            </View>
+
+            <View style={styles.cardInfoGroup}>
+              <Text style={styles.cardLabel}>CVC/CVV</Text>
+              <Text style={styles.cardValue}>{cvv}</Text>
+            </View>
+          </View>
+        </View>
+
         <Text style={[styles.label, isDark && styles.labelDark]}>
           Card Number
         </Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
-          value={user?.cardNum || ""}
-          onChangeText={(text) => handleInputChange("cardNum", text)}
+          value={cardNum}
           keyboardType="numeric"
           placeholder="1234 5678 9012 3456"
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
+          maxLength={16}
+          onChangeText={setCardNum}
         />
 
         <View style={styles.row}>
@@ -180,14 +180,12 @@ export default function EditProfileScreen() {
             </Text>
             <TextInput
               style={[styles.input, isDark && styles.inputDark]}
-              value={user?.cardExpiryMonth || ""}
-              onChangeText={(text) =>
-                handleInputChange("cardExpiryMonth", text)
-              }
+              value={cardExpMonth}
               keyboardType="numeric"
               placeholder="MM"
               placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
               maxLength={2}
+              onChangeText={setCardExpMonth}
             />
           </View>
 
@@ -197,12 +195,12 @@ export default function EditProfileScreen() {
             </Text>
             <TextInput
               style={[styles.input, isDark && styles.inputDark]}
-              value={user?.cardExpiryYear || ""}
-              onChangeText={(text) => handleInputChange("cardExpiryYear", text)}
+              value={cardExpYear}
               keyboardType="numeric"
               placeholder="YY"
               placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
               maxLength={2}
+              onChangeText={setCardExpYear}
             />
           </View>
         </View>
@@ -210,19 +208,15 @@ export default function EditProfileScreen() {
         <Text style={[styles.label, isDark && styles.labelDark]}>CVV</Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
-          value={user?.cvv || ""}
-          onChangeText={(text) => handleInputChange("cvv", text)}
+          value={cvv}
           keyboardType="numeric"
-          secureTextEntry
           placeholder="123"
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
           maxLength={3}
+          onChangeText={setCvv}
         />
 
-        <Pressable
-          style={[styles.saveButton, isDark && styles.saveButtonDark]}
-          onPress={handleSave}
-        >
+        <Pressable style={[styles.saveButton, isDark && styles.saveButtonDark]}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </Pressable>
       </ScrollView>
@@ -277,6 +271,61 @@ const styles = StyleSheet.create({
   },
   sectionHeaderDark: {
     color: "#D0BCFF",
+  },
+  /* Bank Card Styles */
+  cardContainer: {
+    backgroundColor: "#2C1445",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  chip: {
+    width: 42,
+    height: 32,
+    backgroundColor: "#FFD700",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#B8860B",
+  },
+  cardNumberText: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "bold",
+    letterSpacing: 2,
+    marginBottom: 24,
+    fontFamily: "monospace",
+  },
+  cardBottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  cardInfoGroup: {
+    flexDirection: "column",
+  },
+  cardLabel: {
+    color: "#A0A0A0",
+    fontSize: 9,
+    fontWeight: "bold",
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  cardValue: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+    textTransform: "uppercase",
   },
   label: {
     fontSize: 13,
