@@ -21,6 +21,12 @@ export default function EditProfileScreen() {
   const [cardExpYear, setCardExpYear] = useState<string>("");
   const [cvv, setCvv] = useState<string>("");
 
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+
   useEffect(() => {
     const fetchUserData = async () => {
       let userId = 0;
@@ -39,12 +45,66 @@ export default function EditProfileScreen() {
       const allUsers: UserInfo[] = data;
       const foundUser = allUsers.find((p) => p.id === userId);
 
-      if (!foundUser) Alert.alert("Couldn't fetch user data");
-      else setUser(foundUser);
+      if (!foundUser) {
+        Alert.alert("Couldn't fetch user data");
+        router.replace("/");
+      } else setUser(foundUser);
+
+      setFirstName(foundUser?.firstName || "");
+      setLastName(foundUser?.lastName || "");
+      setEmail(foundUser?.email || "");
+      setAddress(foundUser?.address || "");
+      setPhone(foundUser?.phone || "");
+
+      setCardNum(foundUser?.cardNum || "");
+      setCardExpMonth(foundUser?.cardExpiryMonth || "");
+      setCardExpYear(foundUser?.cardExpiryYear || "");
+      setCvv(foundUser?.cvv || "");
     };
 
     fetchUserData();
   }, []);
+
+  const saveUserInfo = async () => {
+    if (!user) return;
+
+    if (Number(cardExpMonth) < 1 || Number(cardExpMonth) > 12) {
+      Alert.alert("Expiry month must be 01-12");
+      return;
+    }
+
+    const newUserInfo = {
+      ...user,
+      address,
+      cardExpiryMonth: cardExpMonth,
+      cardExpiryYear: cardExpYear,
+      cardNum,
+      cvv,
+      email,
+      firstName,
+      lastName,
+      phone,
+    };
+
+    const updateUserInfo = await fetch(
+      `${process.env.EXPO_PUBLIC_USERS}/${user.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newUserInfo),
+      },
+    );
+
+    if (!updateUserInfo.ok) {
+      Alert.alert("Failed to update UserInfo");
+      return;
+    }
+    Alert.alert("database has been updated successfully");
+
+    setUser(newUserInfo);
+  };
 
   const isDark = thema === "dark";
 
@@ -80,7 +140,8 @@ export default function EditProfileScreen() {
         </Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
-          value={user?.firstName || ""}
+          value={firstName}
+          onChangeText={setFirstName}
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
         />
 
@@ -89,14 +150,16 @@ export default function EditProfileScreen() {
         </Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
-          value={user?.lastName || ""}
+          value={lastName}
+          onChangeText={setLastName}
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
         />
 
         <Text style={[styles.label, isDark && styles.labelDark]}>Email</Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
-          value={user?.email || ""}
+          value={email}
+          onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
@@ -107,7 +170,8 @@ export default function EditProfileScreen() {
         </Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
-          value={user?.phone || ""}
+          value={phone}
+          onChangeText={setPhone}
           keyboardType="phone-pad"
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
         />
@@ -115,7 +179,8 @@ export default function EditProfileScreen() {
         <Text style={[styles.label, isDark && styles.labelDark]}>Address</Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
-          value={user?.address || ""}
+          value={address}
+          onChangeText={setAddress}
           placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
         />
 
@@ -125,7 +190,6 @@ export default function EditProfileScreen() {
           Payment Details
         </Text>
 
-        {/* Real Bank Card Visual */}
         <View style={styles.cardContainer}>
           <View style={styles.cardTopRow}>
             <View style={styles.chip} />
@@ -142,7 +206,7 @@ export default function EditProfileScreen() {
             <View style={styles.cardInfoGroup}>
               <Text style={styles.cardLabel}>CARD HOLDER</Text>
               <Text style={styles.cardValue} numberOfLines={1}>
-                {user?.firstName} {user?.lastName}
+                {firstName} {lastName}
               </Text>
             </View>
 
@@ -216,7 +280,10 @@ export default function EditProfileScreen() {
           onChangeText={setCvv}
         />
 
-        <Pressable style={[styles.saveButton, isDark && styles.saveButtonDark]}>
+        <Pressable
+          onPress={saveUserInfo}
+          style={[styles.saveButton, isDark && styles.saveButtonDark]}
+        >
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </Pressable>
       </ScrollView>

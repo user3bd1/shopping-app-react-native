@@ -90,9 +90,22 @@ export default function RegisterScreen() {
     } else {
       const usersApi = process.env.EXPO_PUBLIC_USERS;
       if (!usersApi) return undefined;
+      const resUserApi = await fetch(usersApi);
+      const data = await resUserApi.json();
+      const allUsers: UserInfo[] = Array.isArray(data) ? data : [];
+
+      const foundUser = allUsers.find(
+        (p) => p.email.trim().toLowerCase() === email.trim().toLowerCase(),
+      );
+
+      if (foundUser) {
+        Alert.alert(`email ${email} is in use`);
+        return;
+      }
 
       const userCredentials = process.env.EXPO_PUBLIC_LOGININFO;
       if (!userCredentials) throw new Error("EXPO_PUBLIC_LOGININFO is not set");
+
       const res = await fetch(usersApi, {
         method: "POST",
         headers: {
@@ -267,6 +280,7 @@ export default function RegisterScreen() {
                   placeholderTextColor={isDark ? "#707075" : "#A0A0A0"}
                   value={phone}
                   onChangeText={setPhone}
+                  maxLength={10}
                 />
               </View>
 

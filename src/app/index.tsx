@@ -14,12 +14,19 @@ import {
 } from "react-native";
 
 import { LoginCredentials } from "@/types/types";
+import { triggerLocalNotification } from "@/utils/notifications";
+import * as LocalAuthentication from "expo-local-authentication";
+import * as SecureStore from "expo-secure-store";
+import { authenticateWithFingerprint } from "../utils/authenticate";
 
 export default function LoginScreen() {
   const [password, setPassword] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [visibility, setVisibility] = useState<boolean>(true);
   const [thema, setThema] = useState<string>("light");
+  const [canUseBiometrics, setCanUseBiometrics] = useState<boolean>(false);
+
+  const userKeyId = process.env.EXPO_BIOMETRIC_USER_ID_KEY || "biometric";
 
   useEffect(() => {
     const fetchTheme = async () => {
@@ -28,11 +35,28 @@ export default function LoginScreen() {
         setThema(savedTheme);
       }
     };
+
+    const checkBiometrics = async () => {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      const available = hasHardware && isEnrolled;
+      setCanUseBiometrics(available);
+    };
+
     fetchTheme();
+    checkBiometrics();
   }, []);
 
   const changeVisibility = () => {
     setVisibility(!visibility);
+  };
+
+  const completeLogin = async (userId: string | number) => {
+    await AsyncStorage.setItem("userId", `${userId}`);
+    await SecureStore.setItemAsync(userKeyId, `${userId}`);
+    setCanUseBiometrics(true);
+    triggerLocalNotification("Log In", "You have logged In successfully");
+    router.replace("/components/home");
   };
 
   const logIn = async () => {
@@ -58,10 +82,32 @@ export default function LoginScreen() {
         Alert.alert(`Wrong email or password`);
       } else {
         if (userLoginCredentials[0].id == 0) return;
-        await AsyncStorage.setItem("userId", `${userLoginCredentials[0].id}`);
-        router.replace("/components/home");
+        await completeLogin(userLoginCredentials[0].id!);
       }
     }
+  };
+
+  const handleFingerprintLogin = async () => {
+    const auth = await authenticateWithFingerprint();
+    if (!auth.ok) {
+      if (auth.reason !== "Authentication cancelled.") {
+        Alert.alert("Fingerprint failed", auth.reason);
+      }
+      return;
+    }
+
+    const savedUserId = await SecureStore.getItemAsync(userKeyId);
+    if (!savedUserId) {
+      Alert.alert(
+        "Password sign-in required",
+        "Log in with your email and password once first so we can link your fingerprint.",
+      );
+      return;
+    }
+
+    await AsyncStorage.setItem("userId", savedUserId);
+    triggerLocalNotification("Log In", "You have logged In successfully");
+    router.replace("/components/home");
   };
 
   const isDark = thema === "dark";
@@ -171,6 +217,30 @@ export default function LoginScreen() {
               >
                 <Text style={styles.loginButtonText}>Log In</Text>
               </Pressable>
+
+              {canUseBiometrics && (
+                <Pressable
+                  style={[
+                    styles.biometricButton,
+                    isDark && styles.biometricButtonDark,
+                  ]}
+                  onPress={handleFingerprintLogin}
+                >
+                  <MaterialCommunityIcons
+                    name="fingerprint"
+                    size={22}
+                    color={isDark ? "#D0BCFF" : "#5B1D88"}
+                  />
+                  <Text
+                    style={[
+                      styles.biometricButtonText,
+                      isDark && styles.biometricButtonTextDark,
+                    ]}
+                  >
+                    Log In with Fingerprint
+                  </Text>
+                </Pressable>
+              )}
 
               <View style={styles.footerContainer}>
                 <Text
@@ -323,7 +393,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   loginButtonDark: {
     backgroundColor: "#7D3CB5",
@@ -333,6 +403,29 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  biometricButton: {
+    flexDirection: "row",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#5B1D88",
+    backgroundColor: "transparent",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  biometricButtonDark: {
+    borderColor: "#D0BCFF",
+  },
+  biometricButtonText: {
+    color: "#5B1D88",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  biometricButtonTextDark: {
+    color: "#D0BCFF",
   },
   footerContainer: {
     flexDirection: "row",

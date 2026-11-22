@@ -1,6 +1,7 @@
 import { Product, ProductItem, UserInfo } from "@/types/types";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -34,8 +35,10 @@ export default function WishListScreen() {
       const data = await res.json();
       const allUsers: UserInfo[] = data;
       const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
-      if (user.length == 0) Alert.alert("Couldn't fetch user data");
-      else {
+      if (user.length == 0) {
+        Alert.alert("Couldn't fetch user data");
+        router.replace("/");
+      } else {
         setWishList(user[0].wishList || []);
       }
     };

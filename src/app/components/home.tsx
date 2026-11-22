@@ -5,6 +5,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -12,11 +13,27 @@ import {
   View,
 } from "react-native";
 
+import * as Notifications from "expo-notifications";
 import NavList from "./nav";
 
-import { Product, ProductItem, UserInfo } from "@/types/types";
+import { AppNotification, Product, ProductItem, UserInfo } from "@/types/types";
+import {
+  getStoredNotifications,
+  markNotificationsAsRead,
+  saveNotificationToHistory,
+} from "@/utils/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, router } from "expo-router";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function HomeScreen() {
   const [user, setUser] = useState<UserInfo>();
@@ -24,6 +41,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [productname, setProductName] = useState<string>("");
   const [thema, setThema] = useState<string>("light");
+
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [hasUnread, setHasUnread] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -43,8 +64,10 @@ export default function HomeScreen() {
       const allUsers: UserInfo[] = data;
       const foundUser = allUsers.find((p) => p.id === userId);
 
-      if (!foundUser) Alert.alert("Couldn't fetch user data");
-      else setUser(foundUser);
+      if (!foundUser) {
+        Alert.alert("Couldn't fetch user data");
+        router.replace("/");
+      } else setUser(foundUser);
     };
 
     const fetchProducts = async () => {
@@ -58,8 +81,69 @@ export default function HomeScreen() {
       if (filteredData) setLoading(false);
     };
 
+    async function requestPermissions() {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") {
+        alert("Permission for notifications was denied!");
+      }
+    }
+
+    const loadNotifications = async () => {
+      const stored = await getStoredNotifications();
+      setNotifications(stored.notifications);
+      setHasUnread(stored.hasUnread);
+
+      const presented = await Notifications.getPresentedNotificationsAsync();
+      let currentList = stored.notifications;
+      let anyNew = false;
+
+      for (const item of presented) {
+        const mapped: AppNotification = {
+          id: item.request.identifier,
+          title: item.request.content.title || "New Notification",
+          body: item.request.content.body || "",
+          time: new Date(item.date).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        if (!currentList.some((n) => n.id === mapped.id)) {
+          currentList = await saveNotificationToHistory(mapped);
+          anyNew = true;
+        }
+      }
+
+      if (anyNew) {
+        setNotifications(currentList);
+        setHasUnread(true);
+      }
+    };
+
+    loadNotifications();
+
     fetchUserData();
     fetchProducts();
+    requestPermissions();
+
+    const subscription = Notifications.addNotificationReceivedListener(
+      async (notification) => {
+        const newNotif: AppNotification = {
+          id: notification.request.identifier,
+          title: "New Notification",
+          body: notification.request.content.body || "",
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+
+        const updated = await saveNotificationToHistory(newNotif);
+        setNotifications(updated);
+        setHasUnread(true);
+      },
+    );
+
+    return () => subscription.remove();
   }, []);
 
   const addToWishList = async (id: number) => {
@@ -144,6 +228,12 @@ export default function HomeScreen() {
       });
   };
 
+  const handleBellPress = async () => {
+    setModalVisible(true);
+    setHasUnread(false);
+    await markNotificationsAsRead();
+  };
+
   const isDark = thema === "dark";
 
   return (
@@ -152,11 +242,73 @@ export default function HomeScreen() {
         <Text style={[styles.greeting, isDark && styles.greetingDark]}>
           Hello {user?.firstName}👋{" "}
         </Text>
-        <MaterialCommunityIcons
-          name="bell-outline"
-          color={isDark ? "#F4F4F4" : "#1A1A1A"}
-          size={24}
-        />
+        <View>
+          <Pressable onPress={handleBellPress} style={styles.bellButton}>
+            <MaterialCommunityIcons
+              name="bell-outline"
+              color={isDark ? "#F4F4F4" : "#1A1A1A"}
+              size={24}
+            />
+            {hasUnread && <View style={styles.redDot} />}
+          </Pressable>
+
+          <Modal
+            visible={modalVisible}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View
+                style={[styles.modalContent, isDark && styles.modalContentDark]}
+              >
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+                    Notifications ({notifications.length})
+                  </Text>
+                  <Pressable onPress={() => setModalVisible(false)}>
+                    <MaterialCommunityIcons
+                      name="close"
+                      size={24}
+                      color={isDark ? "#F4F4F4" : "#1A1A1A"}
+                    />
+                  </Pressable>
+                </View>
+
+                {notifications.length === 0 ? (
+                  <Text style={[styles.emptyText, isDark && styles.textDark]}>
+                    No notifications yet.
+                  </Text>
+                ) : (
+                  <FlatList
+                    data={notifications}
+                    keyExtractor={(item) => item.id!}
+                    renderItem={({ item }) => (
+                      <View style={styles.notifItem}>
+                        <View style={styles.notifHeader}>
+                          <Text
+                            style={[
+                              styles.notifTitle,
+                              isDark && styles.textDark,
+                            ]}
+                          >
+                            {item.title}
+                          </Text>
+                          <Text style={styles.notifTime}>{item.time}</Text>
+                        </View>
+                        <Text
+                          style={[styles.notifBody, isDark && styles.textDark]}
+                        >
+                          {item.body}
+                        </Text>
+                      </View>
+                    )}
+                  />
+                )}
+              </View>
+            </View>
+          </Modal>
+        </View>
       </View>
 
       <View
@@ -285,6 +437,80 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  bellButton: {
+    position: "relative",
+    padding: 4,
+  },
+  redDot: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#FF3B30",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "60%",
+    minHeight: "35%",
+  },
+  modalContentDark: {
+    backgroundColor: "#1E1E1E",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
+    paddingBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1A1A1A",
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 40,
+    color: "#666",
+  },
+  notifItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEEEEE",
+  },
+  notifHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  notifTitle: {
+    fontWeight: "600",
+    fontSize: 15,
+    color: "#1A1A1A",
+  },
+  notifTime: {
+    fontSize: 12,
+    color: "#888",
+  },
+  notifBody: {
+    fontSize: 14,
+    color: "#444",
+  },
+  textDark: {
+    color: "#F4F4F4",
+  },
   heartStyle: {
     padding: 4,
   },

@@ -37,8 +37,10 @@ export default function ProfileScreen() {
       const allUsers: UserInfo[] = data;
       const foundUser = allUsers.find((p) => p.id === userId);
 
-      if (!foundUser) Alert.alert("Couldn't fetch user data");
-      else setUser(foundUser);
+      if (!foundUser) {
+        Alert.alert("Couldn't fetch user data");
+        router.replace("/");
+      } else setUser(foundUser);
     };
 
     fetchUserData();
@@ -87,6 +89,12 @@ export default function ProfileScreen() {
       setUser(updatedUser);
       Alert.alert("Image has been edited successfully");
     }
+  };
+
+  const logOut = async () => {
+    await AsyncStorage.removeItem("userId");
+    Alert.alert("You have been logged out");
+    router.replace("/");
   };
 
   const isDark = thema === "dark";
@@ -205,7 +213,7 @@ export default function ProfileScreen() {
 
         <Pressable
           style={[styles.logoutButton, isDark && styles.logoutButtonDark]}
-          onPress={() => console.log("Logged out")}
+          onPress={logOut}
         >
           <MaterialCommunityIcons
             name="logout"

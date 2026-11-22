@@ -52,6 +52,7 @@ export default function ProductsByTitleScreen() {
 
       if (!foundUser) {
         Alert.alert("Couldn't fetch user data");
+        router.replace("/");
       } else {
         setUser(foundUser);
       }
