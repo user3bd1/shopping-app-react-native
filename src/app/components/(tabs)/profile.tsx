@@ -13,12 +13,12 @@ import {
   Text,
   View,
 } from "react-native";
-import NavList from "./nav";
+import { useTheme } from "../../../context/ThemeContext";
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserInfo>();
   const [thema, setThema] = useState<string>("light");
-
+  const { isDark } = useTheme();
   useEffect(() => {
     const fetchUserData = async () => {
       let userId = 0;
@@ -96,8 +96,6 @@ export default function ProfileScreen() {
     Alert.alert("You have been logged out");
     router.replace("/");
   };
-
-  const isDark = thema === "dark";
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
@@ -224,8 +222,6 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Log Out</Text>
         </Pressable>
       </ScrollView>
-
-      <NavList />
     </View>
   );
 }

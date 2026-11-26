@@ -1,26 +1,10 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function SettingsScreen() {
-  const [thema, setThema] = useState<string>("");
-
-  useEffect(() => {
-    const loadTheme = async () => {
-      const savedTheme = await AsyncStorage.getItem("thema");
-      if (savedTheme) setThema(savedTheme);
-    };
-    loadTheme();
-  }, []);
-
-  const changeThema = async (thema1: string) => {
-    await AsyncStorage.setItem("thema", thema1);
-    setThema(thema1);
-  };
-
-  const isDark = thema === "dark";
+  const { thema, isDark, setThema } = useTheme();
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
@@ -47,7 +31,7 @@ export default function SettingsScreen() {
             thema === "light" &&
               (isDark ? styles.activeOptionDark : styles.activeOption),
           ]}
-          onPress={() => changeThema("light")}
+          onPress={() => setThema("light")}
         >
           <View style={styles.optionLeft}>
             <MaterialCommunityIcons
@@ -96,7 +80,7 @@ export default function SettingsScreen() {
             thema === "dark" &&
               (isDark ? styles.activeOptionDark : styles.activeOption),
           ]}
-          onPress={() => changeThema("dark")}
+          onPress={() => setThema("dark")}
         >
           <View style={styles.optionLeft}>
             <MaterialCommunityIcons

@@ -1,8 +1,8 @@
 import { ProductItem, UserInfo } from "@/types/types";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -12,39 +12,36 @@ import {
   Text,
   View,
 } from "react-native";
-import NavList from "./nav";
+import { useTheme } from "../../../context/ThemeContext";
 
 export default function OrdersScreen() {
   const [orders, setOrders] = useState<ProductItem[]>([]);
-  const [thema, setThema] = useState<string>("light");
+  const { isDark } = useTheme();
 
-  useEffect(() => {
-    const getWishList = async () => {
-      let userId = 0;
-      const getUserId: string | null = await AsyncStorage.getItem("userId");
-      if (getUserId != null) userId = parseInt(getUserId);
+  useFocusEffect(
+    useCallback(() => {
+      const getOrders = async () => {
+        let userId = 0;
+        const getUserId: string | null = await AsyncStorage.getItem("userId");
+        if (getUserId != null) userId = parseInt(getUserId);
 
-      const savedTheme = await AsyncStorage.getItem("thema");
-      if (savedTheme) {
-        setThema(savedTheme);
-      }
+        const usersApi = process.env.EXPO_PUBLIC_USERS;
+        if (!usersApi) return undefined;
+        const res = await fetch(usersApi);
+        const data = await res.json();
+        const allUsers: UserInfo[] = data;
+        const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
+        if (user.length == 0) {
+          Alert.alert("Couldn't fetch user data");
+          router.replace("/");
+        } else {
+          setOrders(user[0].orders || []);
+        }
+      };
 
-      const usersApi = process.env.EXPO_PUBLIC_USERS;
-      if (!usersApi) return undefined;
-      const res = await fetch(usersApi);
-      const data = await res.json();
-      const allUsers: UserInfo[] = data;
-      const user: UserInfo[] = allUsers.filter((p) => p.id == userId);
-      if (user.length == 0) {
-        Alert.alert("Couldn't fetch user data");
-        router.replace("/");
-      } else {
-        setOrders(user[0].orders || []);
-      }
-    };
-
-    getWishList();
-  }, []);
+      getOrders();
+    }, []),
+  );
 
   const deleteFromOrders = async (id: number) => {
     let userId = 0;
@@ -86,7 +83,6 @@ export default function OrdersScreen() {
   };
 
   const totalPrice = orders.reduce((sum, item) => sum + (item.price || 0), 0);
-  const isDark = thema === "dark";
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
@@ -193,8 +189,6 @@ export default function OrdersScreen() {
           </Pressable>
         </View>
       )}
-
-      <NavList />
     </View>
   );
 }

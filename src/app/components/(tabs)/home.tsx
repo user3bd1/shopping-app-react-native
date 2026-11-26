@@ -13,9 +13,6 @@ import {
   View,
 } from "react-native";
 
-import * as Notifications from "expo-notifications";
-import NavList from "./nav";
-
 import { AppNotification, Product, ProductItem, UserInfo } from "@/types/types";
 import {
   getStoredNotifications,
@@ -23,7 +20,10 @@ import {
   saveNotificationToHistory,
 } from "@/utils/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Link, router } from "expo-router";
+import * as Notifications from "expo-notifications";
+import { Link, router, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+import { useTheme } from "../../../context/ThemeContext";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -40,45 +40,22 @@ export default function HomeScreen() {
   const [filterdProducts, setFilterdProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [productname, setProductName] = useState<string>("");
-  const [thema, setThema] = useState<string>("light");
+  const { isDark } = useTheme();
 
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [hasUnread, setHasUnread] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      let userId = 0;
-      const getUserId: string | null = await AsyncStorage.getItem("userId");
-      if (getUserId != null) userId = parseInt(getUserId);
-
-      const savedTheme = await AsyncStorage.getItem("thema");
-      if (savedTheme) {
-        setThema(savedTheme);
-      }
-
-      const usersApi = process.env.EXPO_PUBLIC_USERS;
-      if (!usersApi) return undefined;
-      const res = await fetch(usersApi);
-      const data = await res.json();
-      const allUsers: UserInfo[] = data;
-      const foundUser = allUsers.find((p) => p.id === userId);
-
-      if (!foundUser) {
-        Alert.alert("Couldn't fetch user data");
-        router.replace("/");
-      } else setUser(foundUser);
-    };
-
     const fetchProducts = async () => {
       const productsApi = process.env.EXPO_PUBLIC_PRODUCTSAPI;
-      if (!productsApi) return undefined;
+      if (!productsApi) return;
       const res = await fetch(productsApi);
       const data: Product[] = await res.json();
       const filteredData = data.filter((p) => Number(p.rating) >= 4);
 
       setFilterdProducts(filteredData);
-      if (filteredData) setLoading(false);
+      setLoading(false);
     };
 
     async function requestPermissions() {
@@ -88,40 +65,6 @@ export default function HomeScreen() {
       }
     }
 
-    const loadNotifications = async () => {
-      const stored = await getStoredNotifications();
-      setNotifications(stored.notifications);
-      setHasUnread(stored.hasUnread);
-
-      const presented = await Notifications.getPresentedNotificationsAsync();
-      let currentList = stored.notifications;
-      let anyNew = false;
-
-      for (const item of presented) {
-        const mapped: AppNotification = {
-          id: item.request.identifier,
-          title: item.request.content.title || "New Notification",
-          body: item.request.content.body || "",
-          time: new Date(item.date).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        };
-        if (!currentList.some((n) => n.id === mapped.id)) {
-          currentList = await saveNotificationToHistory(mapped);
-          anyNew = true;
-        }
-      }
-
-      if (anyNew) {
-        setNotifications(currentList);
-        setHasUnread(true);
-      }
-    };
-
-    loadNotifications();
-
-    fetchUserData();
     fetchProducts();
     requestPermissions();
 
@@ -145,6 +88,63 @@ export default function HomeScreen() {
 
     return () => subscription.remove();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchUserData = async () => {
+        let userId = 0;
+        const getUserId: string | null = await AsyncStorage.getItem("userId");
+        if (getUserId != null) userId = parseInt(getUserId);
+
+        const usersApi = process.env.EXPO_PUBLIC_USERS;
+        if (!usersApi) return;
+        const res = await fetch(usersApi);
+        const allUsers: UserInfo[] = await res.json();
+        const foundUser = allUsers.find((p) => p.id === userId);
+
+        if (!foundUser) {
+          Alert.alert("Couldn't fetch user data");
+          router.replace("/");
+        } else {
+          setUser(foundUser);
+        }
+      };
+
+      const loadNotifications = async () => {
+        const stored = await getStoredNotifications();
+        setNotifications(stored.notifications);
+        setHasUnread(stored.hasUnread);
+
+        const presented = await Notifications.getPresentedNotificationsAsync();
+        let currentList = stored.notifications;
+        let anyNew = false;
+
+        for (const item of presented) {
+          const mapped: AppNotification = {
+            id: item.request.identifier,
+            title: item.request.content.title || "New Notification",
+            body: item.request.content.body || "",
+            time: new Date(item.date).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          };
+          if (!currentList.some((n) => n.id === mapped.id)) {
+            currentList = await saveNotificationToHistory(mapped);
+            anyNew = true;
+          }
+        }
+
+        if (anyNew) {
+          setNotifications(currentList);
+          setHasUnread(true);
+        }
+      };
+
+      fetchUserData();
+      loadNotifications();
+    }, []),
+  );
 
   const addToWishList = async (id: number) => {
     if (!user) return;
@@ -233,8 +233,6 @@ export default function HomeScreen() {
     setHasUnread(false);
     await markNotificationsAsRead();
   };
-
-  const isDark = thema === "dark";
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
@@ -430,8 +428,6 @@ export default function HomeScreen() {
           />
         </View>
       )}
-
-      <NavList />
     </View>
   );
 }
